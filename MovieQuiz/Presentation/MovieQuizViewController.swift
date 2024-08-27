@@ -2,6 +2,11 @@ import UIKit
 
 final class MovieQuizViewController: UIViewController {
     
+    // связываем элементы интерфейса
+    @IBOutlet weak private var counterLabel: UILabel!
+    @IBOutlet weak private var imageView: UIImageView!
+    @IBOutlet weak private var textLabel: UILabel!
+    
     // массив вопросов
     private let questions: [QuizQuestion] = [
         QuizQuestion(
@@ -45,11 +50,6 @@ final class MovieQuizViewController: UIViewController {
             text: "Рейтинг этого фильма больше чем 6?",
             correctAnswer: false)
         ]
-    
-    // связываем элементы интерфейса
-    @IBOutlet weak private var counterLabel: UILabel!
-    @IBOutlet weak private var imageView: UIImageView!
-    @IBOutlet weak private var textLabel: UILabel!
     
     // индекс текущего вопроса
     private var currentQuestionIndex = 0
