@@ -84,7 +84,8 @@
 				5582B3B42CA337FC00411FFA /* StatisticServiceProtocol.swift */,
 				5582B3B62CA33BF900411FFA /* StatisticService.swift */,
 			);
-			path = Services;
+			name = Services;
+			path = ../Services;
 			sourceTree = "<group>";
 		};
 		55CCF8702C77884B00A1ED7E /* Fonts */ = {
@@ -139,7 +140,6 @@
 		AD1ABAA52831907B00B3E448 = {
 			isa = PBXGroup;
 			children = (
-				5571D83B2C91F345004932B0 /* Services */,
 				AD1ABAB02831907B00B3E448 /* MovieQuiz */,
 				AD1ABAAF2831907B00B3E448 /* Products */,
 			);
@@ -156,6 +156,7 @@
 		AD1ABAB02831907B00B3E448 /* MovieQuiz */ = {
 			isa = PBXGroup;
 			children = (
+				5571D83B2C91F345004932B0 /* Services */,
 				AD1ABAB12831907B00B3E448 /* AppDelegate.swift */,
 				AD1ABAB32831907B00B3E448 /* SceneDelegate.swift */,
 				ADF0CF75283FDAA10075F54D /* Helpers */,

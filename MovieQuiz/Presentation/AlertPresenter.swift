@@ -1,16 +1,12 @@
 import Foundation
 import UIKit
 
-class AlertPresenter: AlertPresenterProtocol {
+final class AlertPresenter: AlertPresenterProtocol {
     
     weak var delegate: AlertPresenterDelegate?
     
     // создаем модель алерта для отображения
-    func showAlert(alertModel: AlertModel?) {
-        
-        guard let alertModel = alertModel else {
-            return
-        }
+    func showAlert(alertModel: AlertModel) {
         
         let alert = UIAlertController(
             title: alertModel.title,

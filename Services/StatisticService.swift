@@ -62,7 +62,7 @@ final class StatisticService: StatisticServiceProtocol {
     
     var totalAccuracy: Double {
         get {
-            return Double(totalCorrectAnswers) / Double(questionsCount) * 100
+            questionsCount > 0 ? Double(totalCorrectAnswers) / Double(questionsCount) * 100 : 0
         }
         set {
             storage.set(newValue, forKey: Keys.totalAccuracy.rawValue)

@@ -18,7 +18,7 @@ final class MovieQuizViewController:
     private var currentQuestion: QuizQuestion?
     
     // обращение к созданию статистики по игре
-    private var statisticService: StatisticService?
+    private var statisticService: StatisticServiceProtocol?
     
     // обращение к созданию алерта
     private var alertPresenter: AlertPresenter?
