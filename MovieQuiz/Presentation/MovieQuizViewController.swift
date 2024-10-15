@@ -12,10 +12,10 @@ final class MovieQuizViewController:
     @IBOutlet weak private var activityIndicator: UIActivityIndicatorView!
     
     // MARK: - Properties
-    // общее количество вопросов для квиза
-    private let questionsAmount: Int = 10
-    // индекс текущего вопроса
-    private var currentQuestionIndex = 1
+    
+    // обращение к созданию презентера
+    private let presenter = MovieQuizPresenter()
+    
     // обращение к фабрике вопросов
     private var questionFactory: QuestionFactory?
     // вопрос который видит пользователь
@@ -71,7 +71,7 @@ final class MovieQuizViewController:
                 [weak self] in
                 guard let self = self else { return }
                 // сбрасываем переменную с индексом вопроса
-                self.currentQuestionIndex = 1
+                self.presenter.resetQuestionIndex()
                 // сбрасываем переменную с количеством правильных ответов
                 self.correctAnswers = 0
                 // заново показываем первый вопрос
@@ -89,7 +89,7 @@ final class MovieQuizViewController:
             return
         }
         currentQuestion = question
-        let viewModel = convert(model: question)
+        let viewModel = presenter.convert(model: question)
         
         // тут weak self избыточен (исключение)
         DispatchQueue.main.async {
@@ -119,17 +119,6 @@ final class MovieQuizViewController:
         }
     }
     
-    /// метод конвертации, который принимает вопрос и возвращает вью модель для экрана вопроса
-    private func convert(model: QuizQuestion) -> QuizStepViewModel {
-        let questionNumber = "\(currentQuestionIndex)/\(questionsAmount)"
-        let questionStep = QuizStepViewModel(
-            image: UIImage(data: model.image) ?? UIImage(),
-            question: model.text,
-            questionNumber: questionNumber
-        )
-        return questionStep
-    }
-    
     /// метод вывода на экран вопроса
     private func showQuestion(quiz step: QuizStepViewModel) {
         counterLabel.text = step.questionNumber
@@ -155,18 +144,18 @@ final class MovieQuizViewController:
         
     /// метод, который содержит логику перехода в один из сценариев
     private func showNextQuestionOrResults() {
-        if currentQuestionIndex == questionsAmount {
+        if presenter.isLastQuestion() {
             // идём в состояние "Результат квиза"
             // собираем результат игры
             let currentDate = Date().dateTimeString
-            let gameResult = GameResult(correct: correctAnswers, total: questionsAmount, date: currentDate)
+            let gameResult = GameResult(correct: correctAnswers, total: presenter.questionsAmount, date: currentDate)
             
             guard let statisticService else { fatalError() }
             statisticService.store(gameResult)
             
             // собираем модель для отображения результатов
             let text = """
-                Ваш результат: \(correctAnswers)/\(questionsAmount)
+                Ваш результат: \(correctAnswers)/\(presenter.questionsAmount)
                 Количество сыгранных квизов: \(statisticService.gamesCount)
                 Рекорд: \(statisticService.bestGame.correct)/\(statisticService.bestGame.total) (\(statisticService.bestGame.date))
                 Средняя точность: \(String(format: "%.2f%%", statisticService.totalAccuracy))
@@ -179,7 +168,7 @@ final class MovieQuizViewController:
             // показываем алерт с результатами
             showResult(quiz: viewModel)
         } else {
-            currentQuestionIndex += 1
+            presenter.switchToNextQuestion()
             // идём в состояние "Вопрос показан"
             self.questionFactory?.requestNextQuestion()
         }
@@ -198,7 +187,7 @@ final class MovieQuizViewController:
                 [weak self] in
                 guard let self = self else { return }
                 // сбрасываем переменную с индексом вопроса
-                self.currentQuestionIndex = 1
+                self.presenter.resetQuestionIndex()
                 // сбрасываем переменную с количеством правильных ответов
                 self.correctAnswers = 0
                 // заново показываем первый вопрос
