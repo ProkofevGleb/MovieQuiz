@@ -18,11 +18,7 @@ final class MovieQuizViewController:
     
     // обращение к фабрике вопросов
     private var questionFactory: QuestionFactory?
-    // вопрос который видит пользователь
-    private var currentQuestion: QuizQuestion?
     
-    // счётчик правильных ответов
-    private var correctAnswers = 0
     // обращение к созданию статистики по игре
     private var statisticService: StatisticServiceProtocol?
     
@@ -33,6 +29,8 @@ final class MovieQuizViewController:
         super.viewDidLoad()
 
         setupActivityIndicator()
+        
+        presenter.viewController = self
         
         // создаем экземпляр для фабрики вопросов
         questionFactory = QuestionFactory(moviesLoader: MoviesLoader(), delegate: self)
@@ -70,10 +68,8 @@ final class MovieQuizViewController:
             completion: {
                 [weak self] in
                 guard let self = self else { return }
-                // сбрасываем переменную с индексом вопроса
-                self.presenter.resetQuestionIndex()
-                // сбрасываем переменную с количеством правильных ответов
-                self.correctAnswers = 0
+                // сбрасываем переменные с индексом вопроса и количеством правильных ответов
+                self.presenter.restartGame()
                 // заново показываем первый вопрос
                 self.questionFactory?.requestNextQuestion()
             }
@@ -85,16 +81,7 @@ final class MovieQuizViewController:
     
     func didReceiveNextQuestion(question: QuizQuestion?) {
         // получаем вопрос от фабрики вопросов и отображаем его
-        guard let question = question else {
-            return
-        }
-        currentQuestion = question
-        let viewModel = presenter.convert(model: question)
-        
-        // тут weak self избыточен (исключение)
-        DispatchQueue.main.async {
-            self.showQuestion(quiz: viewModel)
-        }
+        presenter.didReceiveNextQuestion(question: question)
     }
     
     func didLoadDataFromServer() {
@@ -120,15 +107,15 @@ final class MovieQuizViewController:
     }
     
     /// метод вывода на экран вопроса
-    private func showQuestion(quiz step: QuizStepViewModel) {
+    func showQuestion(quiz step: QuizStepViewModel) {
         counterLabel.text = step.questionNumber
         imageView.image = step.image
         textLabel.text = step.question
     }
         
     /// метод, который меняет цвет рамки и запускает отображение следующего вопроса
-    private func showAnswerResult(isCorrect: Bool) {
-        if isCorrect { correctAnswers += 1 }
+    func showAnswerResult(isCorrect: Bool) {
+        presenter.didAnswer(isCorrectAnswer: isCorrect)
         // красим рамку
         imageView.layer.masksToBounds = true
         imageView.layer.borderWidth = 8
@@ -137,89 +124,66 @@ final class MovieQuizViewController:
         // запускаем задачу через 1 секунду c помощью диспетчера задач
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
             // код, который мы хотим вызвать через 1 секунду
-            self.showNextQuestionOrResults()
+            self.presenter.questionFactory = self.questionFactory
+            self.presenter.showNextQuestionOrResults()
             self.imageView.layer.borderWidth = 0
+            // снимаем блокировку кнопок
+            self.lockButton(isEnabled: true)
         }
-    }
-        
-    /// метод, который содержит логику перехода в один из сценариев
-    private func showNextQuestionOrResults() {
-        if presenter.isLastQuestion() {
-            // идём в состояние "Результат квиза"
-            // собираем результат игры
-            let currentDate = Date().dateTimeString
-            let gameResult = GameResult(correct: correctAnswers, total: presenter.questionsAmount, date: currentDate)
-            
-            guard let statisticService else { fatalError() }
-            statisticService.store(gameResult)
-            
-            // собираем модель для отображения результатов
-            let text = """
-                Ваш результат: \(correctAnswers)/\(presenter.questionsAmount)
-                Количество сыгранных квизов: \(statisticService.gamesCount)
-                Рекорд: \(statisticService.bestGame.correct)/\(statisticService.bestGame.total) (\(statisticService.bestGame.date))
-                Средняя точность: \(String(format: "%.2f%%", statisticService.totalAccuracy))
-                """
-            let viewModel = QuizResultsViewModel(
-                title: "Этот раунд окончен!",
-                text: text,
-                buttonText: "Сыграть ещё раз")
-            
-            // показываем алерт с результатами
-            showResult(quiz: viewModel)
-        } else {
-            presenter.switchToNextQuestion()
-            // идём в состояние "Вопрос показан"
-            self.questionFactory?.requestNextQuestion()
-        }
-        // снимаем блокировку кнопок
-        lockButton(isEnabled: true)
     }
     
     /// метод показа алерта с результатами квиза
-    private func showResult(quiz result: QuizResultsViewModel) {
+    func showResult(quiz result: QuizResultsViewModel) {
+        var message = result.text
+        // собираем результат игры
+        let currentDate = Date().dateTimeString
+        let gameResult = GameResult(correct: presenter.correctAnswers, total: presenter.questionsAmount, date: currentDate)
+        
+        guard let statisticService else { fatalError() }
+        statisticService.store(gameResult)
+        
+        // собираем модель для отображения результатов
+        message = """
+            Ваш результат: \(presenter.correctAnswers)/\(presenter.questionsAmount)
+            Количество сыгранных квизов: \(statisticService.gamesCount)
+            Рекорд: \(statisticService.bestGame.correct)/\(statisticService.bestGame.total) (\(statisticService.bestGame.date))
+            Средняя точность: \(String(format: "%.2f%%", statisticService.totalAccuracy))
+            """
         
         let alert = AlertModel(
             title: result.title,
-            message: result.text,
+            message: message,
             buttonText: result.buttonText,
             completion: {
                 [weak self] in
                 guard let self = self else { return }
-                // сбрасываем переменную с индексом вопроса
-                self.presenter.resetQuestionIndex()
-                // сбрасываем переменную с количеством правильных ответов
-                self.correctAnswers = 0
+                // сбрасываем переменные с индексом вопроса и количеством правильных ответов
+                self.presenter.restartGame()
                 // заново показываем первый вопрос
                 self.questionFactory?.requestNextQuestion()
             }
         )
-        
         alertPresenter?.showAlert(alertModel: alert)
     }
     
     private func lockButton(isEnabled: Bool) {
-            noButton.isEnabled = isEnabled
-            yesButton.isEnabled = isEnabled
-        }
+        noButton.isEnabled = isEnabled
+        yesButton.isEnabled = isEnabled
+    }
         
     // устанавливаем действие при нажатии на кнопку "Нет"
     @IBAction private func noButtonClicked(_ sender: Any) {
         // блокируем кнопки
         lockButton(isEnabled: false)
-        guard let currentQuestion = currentQuestion else { return }
-        let givenAnswer = false
-        showAnswerResult(isCorrect: givenAnswer == currentQuestion.correctAnswer)
+        // вызываем действие
+        presenter.noButtonClicked()
     }
     
     // устанавливаем действие при нажатии на кнопку "Да"
     @IBAction private func yesButtonClicked(_ sender: Any) {
         // блокируем кнопки
         lockButton(isEnabled: false)
-        guard let currentQuestion = currentQuestion else {
-            return
-        }
-        let givenAnswer = true
-        showAnswerResult(isCorrect: givenAnswer == currentQuestion.correctAnswer)
+        // вызываем действие
+        presenter.yesButtonClicked()
     }
 }
