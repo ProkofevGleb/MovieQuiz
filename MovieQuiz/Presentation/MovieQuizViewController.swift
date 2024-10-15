@@ -9,39 +9,76 @@ final class MovieQuizViewController:
     @IBOutlet weak private var textLabel: UILabel!
     @IBOutlet weak private var noButton: UIButton!
     @IBOutlet weak private var yesButton: UIButton!
+    @IBOutlet weak private var activityIndicator: UIActivityIndicatorView!
     
+    // MARK: - Properties
     // общее количество вопросов для квиза
     private let questionsAmount: Int = 10
+    // индекс текущего вопроса
+    private var currentQuestionIndex = 1
     // обращение к фабрике вопросов
     private var questionFactory: QuestionFactory?
     // вопрос который видит пользователь
     private var currentQuestion: QuizQuestion?
     
+    // счётчик правильных ответов
+    private var correctAnswers = 0
     // обращение к созданию статистики по игре
     private var statisticService: StatisticServiceProtocol?
     
     // обращение к созданию алерта
     private var alertPresenter: AlertPresenter?
     
-    // индекс текущего вопроса
-    private var currentQuestionIndex = 1
-    // счётчик правильных ответов
-    private var correctAnswers = 0
-    
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        let questionFactory = QuestionFactory()
-        questionFactory.delegate = self
-        self.questionFactory = questionFactory
+        setupActivityIndicator()
         
-        questionFactory.requestNextQuestion()
+        // создаем экземпляр для фабрики вопросов
+        questionFactory = QuestionFactory(moviesLoader: MoviesLoader(), delegate: self)
+        
+        // показываем индикатор загрузки пока не загрузятся данные
+        showLoadingIndicator(isEnabled: true)
+        questionFactory?.loadData()
         
         statisticService = StatisticService()
         
         let alertPresenter = AlertPresenter()
         alertPresenter.delegate = self
         self.alertPresenter = alertPresenter
+    }
+    
+    // MARK: - Network
+    /// настройки для индикатора загрузки
+    func setupActivityIndicator() {
+        // индикатор исчезает, когда он неактивен
+        activityIndicator.hidesWhenStopped = true
+    }
+    
+    private func showLoadingIndicator(isEnabled: Bool) {
+        isEnabled ? activityIndicator.startAnimating() : activityIndicator.stopAnimating()
+    }
+    
+    private func showNetworkError(message: String) {
+        showLoadingIndicator(isEnabled: false)
+        
+        // создайте и покажите алерт
+        let alert = AlertModel(
+            title: "Ошибка",
+            message: message,
+            buttonText: "Попробовать еще раз",
+            completion: {
+                [weak self] in
+                guard let self = self else { return }
+                // сбрасываем переменную с индексом вопроса
+                self.currentQuestionIndex = 1
+                // сбрасываем переменную с количеством правильных ответов
+                self.correctAnswers = 0
+                // заново показываем первый вопрос
+                self.questionFactory?.requestNextQuestion()
+            }
+        )   
+        alertPresenter?.showAlert(alertModel: alert)
     }
     
     // MARK: - QuestionFactoryDelegate
@@ -60,6 +97,17 @@ final class MovieQuizViewController:
         }
     }
     
+    func didLoadDataFromServer() {
+        // скрываем индикатор загрузки
+        showLoadingIndicator(isEnabled: false)
+        questionFactory?.requestNextQuestion()
+    }
+
+    func didFailToLoadData(with error: Error) {
+        // возьмём в качестве сообщения описание ошибки
+        showNetworkError(message: error.localizedDescription)
+    }
+    
     // MARK: - AlertPresenterDelegate
     
     func didReceiveResultAlert(alert: UIAlertController?) {
@@ -71,11 +119,11 @@ final class MovieQuizViewController:
         }
     }
     
-    /// метод конвертации, который принимает моковый вопрос и возвращает вью модель для экрана вопроса
+    /// метод конвертации, который принимает вопрос и возвращает вью модель для экрана вопроса
     private func convert(model: QuizQuestion) -> QuizStepViewModel {
         let questionNumber = "\(currentQuestionIndex)/\(questionsAmount)"
         let questionStep = QuizStepViewModel(
-            image: UIImage(named: model.image) ?? UIImage(),
+            image: UIImage(data: model.image) ?? UIImage(),
             question: model.text,
             questionNumber: questionNumber
         )
@@ -128,7 +176,7 @@ final class MovieQuizViewController:
                 text: text,
                 buttonText: "Сыграть ещё раз")
             
-            // показываем результаты в виде алерта
+            // показываем алерт с результатами
             showResult(quiz: viewModel)
         } else {
             currentQuestionIndex += 1
