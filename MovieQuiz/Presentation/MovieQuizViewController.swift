@@ -13,14 +13,12 @@ final class MovieQuizViewController:
     
     // MARK: - Properties
     
-    // свойство презентера
+    // обращение к MovieQuizPresenter
     private var presenter: MovieQuizPresenter!
-    
-    // обращение к созданию статистики по игре
-    private var statisticService: StatisticServiceProtocol?
-    
-    // обращение к созданию алерта
+    // обращение к AlertPresenter
     private var alertPresenter: AlertPresenter?
+    
+    // MARK: - Lifecycle
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -29,28 +27,28 @@ final class MovieQuizViewController:
         
         presenter = MovieQuizPresenter(viewController: self)
         
-        statisticService = StatisticService()
-        
         let alertPresenter = AlertPresenter()
         alertPresenter.delegate = self
         self.alertPresenter = alertPresenter
     }
     
     // MARK: - Network
-    /// настройки для индикатора загрузки
+    
+    /// метод настройки для индикатора загрузки
     func setupActivityIndicator() {
         // индикатор исчезает, когда он неактивен
         activityIndicator.hidesWhenStopped = true
     }
     
+    /// метод отображения индикатора загрузки
     func showLoadingIndicator(isEnabled: Bool) {
         isEnabled ? activityIndicator.startAnimating() : activityIndicator.stopAnimating()
     }
     
+    /// метод получения ошибки и отображения её в алерте
     func showNetworkError(message: String) {
         showLoadingIndicator(isEnabled: false)
-        
-        // создайте и покажите алерт
+        // создание алерта ошибки
         let alert = AlertModel(
             title: "Ошибка",
             message: message,
@@ -67,6 +65,7 @@ final class MovieQuizViewController:
     
     // MARK: - AlertPresenterDelegate
     
+    /// метод показа алерта с результатами
     func didReceiveResultAlert(alert: UIAlertController?) {
         guard let alert = alert else {
             return
@@ -76,52 +75,29 @@ final class MovieQuizViewController:
         }
     }
     
+    // MARK: - Functions
+    
     /// метод вывода на экран вопроса
     func showQuestion(quiz step: QuizStepViewModel) {
+        imageView.layer.borderColor = UIColor.clear.cgColor
         counterLabel.text = step.questionNumber
         imageView.image = step.image
         textLabel.text = step.question
     }
-        
-    /// метод, который меняет цвет рамки и запускает отображение следующего вопроса
-    func showAnswerResult(isCorrect: Bool) {
-        presenter.didAnswer(isCorrectAnswer: isCorrect)
-        // красим рамку
+    
+    /// метод покраски рамки
+    func highlightImageBorder(isCorrect: Bool) {
         imageView.layer.masksToBounds = true
         imageView.layer.borderWidth = 8
         imageView.layer.borderColor = isCorrect ? UIColor.ypGreen.cgColor : UIColor.ypRed.cgColor
-        
-        // запускаем задачу через 1 секунду c помощью диспетчера задач
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            // код, который мы хотим вызвать через 1 секунду
-            self.presenter.showNextQuestionOrResults()
-            self.imageView.layer.borderWidth = 0
-            // снимаем блокировку кнопок
-            self.lockButton(isEnabled: true)
-        }
     }
     
     /// метод показа алерта с результатами квиза
     func showResult(quiz result: QuizResultsViewModel) {
-        var message = result.text
-        // собираем результат игры
-        let currentDate = Date().dateTimeString
-        let gameResult = GameResult(correct: presenter.correctAnswers, total: presenter.questionsAmount, date: currentDate)
-        
-        guard let statisticService else { fatalError() }
-        statisticService.store(gameResult)
-        
-        // собираем модель для отображения результатов
-        message = """
-            Ваш результат: \(presenter.correctAnswers)/\(presenter.questionsAmount)
-            Количество сыгранных квизов: \(statisticService.gamesCount)
-            Рекорд: \(statisticService.bestGame.correct)/\(statisticService.bestGame.total) (\(statisticService.bestGame.date))
-            Средняя точность: \(String(format: "%.2f%%", statisticService.totalAccuracy))
-            """
-        
+        let resultMessage = presenter.makeResultsMessage()
         let alert = AlertModel(
             title: result.title,
-            message: message,
+            message: resultMessage,
             buttonText: result.buttonText,
             completion: {
                 [weak self] in
@@ -133,10 +109,13 @@ final class MovieQuizViewController:
         alertPresenter?.showAlert(alertModel: alert)
     }
     
-    private func lockButton(isEnabled: Bool) {
+    /// метод блокировки кнопок
+    func lockButton(isEnabled: Bool) {
         noButton.isEnabled = isEnabled
         yesButton.isEnabled = isEnabled
     }
+    
+    // MARK: - Actions
         
     // устанавливаем действие при нажатии на кнопку "Нет"
     @IBAction private func noButtonClicked(_ sender: Any) {
