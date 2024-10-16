@@ -1,7 +1,10 @@
+import Foundation
 import UIKit
 
-final class MovieQuizViewController: 
-    UIViewController, AlertPresenterDelegate {
+final class MovieQuizViewController:
+    UIViewController, MovieQuizViewControllerProtocol, AlertPresenterDelegate {
+    
+    // MARK: - Outlets
     
     // связываем элементы интерфейса
     @IBOutlet weak private var counterLabel: UILabel!

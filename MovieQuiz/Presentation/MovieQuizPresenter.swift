@@ -1,4 +1,3 @@
-import Foundation
 import UIKit
 
 final class MovieQuizPresenter: QuestionFactoryDelegate {
@@ -7,7 +6,7 @@ final class MovieQuizPresenter: QuestionFactoryDelegate {
     
     private var questionFactory: QuestionFactoryProtocol?
     private let statisticService: StatisticServiceProtocol!
-    private weak var viewController: MovieQuizViewController?
+    private weak var viewController: MovieQuizViewControllerProtocol?
     
     // общее количество вопросов для квиза
     private let questionsAmount: Int = 10
@@ -18,7 +17,7 @@ final class MovieQuizPresenter: QuestionFactoryDelegate {
     // счётчик правильных ответов
     private var correctAnswers = 0
         
-    init(viewController: MovieQuizViewController) {
+    init(viewController: MovieQuizViewControllerProtocol) {
         self.viewController = viewController
         
         statisticService = StatisticService()
@@ -146,7 +145,7 @@ final class MovieQuizPresenter: QuestionFactoryDelegate {
     }
     
     /// Собираем результаты игры
-    private func makeResultsMessage() -> String {
+    func makeResultsMessage() -> String {
         let currentDate = Date().dateTimeString
         let gameResult = GameResult(correct: correctAnswers, total: questionsAmount, date: currentDate)
         
