@@ -1,7 +1,7 @@
 import UIKit
 
 final class MovieQuizViewController: 
-    UIViewController, QuestionFactoryDelegate, AlertPresenterDelegate {
+    UIViewController, AlertPresenterDelegate {
     
     // связываем элементы интерфейса
     @IBOutlet weak private var counterLabel: UILabel!
@@ -13,11 +13,8 @@ final class MovieQuizViewController:
     
     // MARK: - Properties
     
-    // обращение к созданию презентера
-    private let presenter = MovieQuizPresenter()
-    
-    // обращение к фабрике вопросов
-    private var questionFactory: QuestionFactory?
+    // свойство презентера
+    private var presenter: MovieQuizPresenter!
     
     // обращение к созданию статистики по игре
     private var statisticService: StatisticServiceProtocol?
@@ -30,14 +27,7 @@ final class MovieQuizViewController:
 
         setupActivityIndicator()
         
-        presenter.viewController = self
-        
-        // создаем экземпляр для фабрики вопросов
-        questionFactory = QuestionFactory(moviesLoader: MoviesLoader(), delegate: self)
-        
-        // показываем индикатор загрузки пока не загрузятся данные
-        showLoadingIndicator(isEnabled: true)
-        questionFactory?.loadData()
+        presenter = MovieQuizPresenter(viewController: self)
         
         statisticService = StatisticService()
         
@@ -53,11 +43,11 @@ final class MovieQuizViewController:
         activityIndicator.hidesWhenStopped = true
     }
     
-    private func showLoadingIndicator(isEnabled: Bool) {
+    func showLoadingIndicator(isEnabled: Bool) {
         isEnabled ? activityIndicator.startAnimating() : activityIndicator.stopAnimating()
     }
     
-    private func showNetworkError(message: String) {
+    func showNetworkError(message: String) {
         showLoadingIndicator(isEnabled: false)
         
         // создайте и покажите алерт
@@ -70,29 +60,9 @@ final class MovieQuizViewController:
                 guard let self = self else { return }
                 // сбрасываем переменные с индексом вопроса и количеством правильных ответов
                 self.presenter.restartGame()
-                // заново показываем первый вопрос
-                self.questionFactory?.requestNextQuestion()
             }
         )   
         alertPresenter?.showAlert(alertModel: alert)
-    }
-    
-    // MARK: - QuestionFactoryDelegate
-    
-    func didReceiveNextQuestion(question: QuizQuestion?) {
-        // получаем вопрос от фабрики вопросов и отображаем его
-        presenter.didReceiveNextQuestion(question: question)
-    }
-    
-    func didLoadDataFromServer() {
-        // скрываем индикатор загрузки
-        showLoadingIndicator(isEnabled: false)
-        questionFactory?.requestNextQuestion()
-    }
-
-    func didFailToLoadData(with error: Error) {
-        // возьмём в качестве сообщения описание ошибки
-        showNetworkError(message: error.localizedDescription)
     }
     
     // MARK: - AlertPresenterDelegate
@@ -124,7 +94,6 @@ final class MovieQuizViewController:
         // запускаем задачу через 1 секунду c помощью диспетчера задач
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
             // код, который мы хотим вызвать через 1 секунду
-            self.presenter.questionFactory = self.questionFactory
             self.presenter.showNextQuestionOrResults()
             self.imageView.layer.borderWidth = 0
             // снимаем блокировку кнопок
@@ -159,8 +128,6 @@ final class MovieQuizViewController:
                 guard let self = self else { return }
                 // сбрасываем переменные с индексом вопроса и количеством правильных ответов
                 self.presenter.restartGame()
-                // заново показываем первый вопрос
-                self.questionFactory?.requestNextQuestion()
             }
         )
         alertPresenter?.showAlert(alertModel: alert)

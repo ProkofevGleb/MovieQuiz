@@ -1,22 +1,58 @@
 import Foundation
 import UIKit
 
-final class MovieQuizPresenter {
+final class MovieQuizPresenter: QuestionFactoryDelegate {
     
     // общее количество вопросов для квиза
     let questionsAmount: Int = 10
     // индекс текущего вопроса
     var currentQuestionIndex = 1
     
-    // обращение к фабрике вопросов
-    var questionFactory: QuestionFactory?
     // вопрос который видит пользователь
     var currentQuestion: QuizQuestion?
 
     // счётчик правильных ответов
     var correctAnswers = 0
     
-    weak var viewController: MovieQuizViewController?
+    private var questionFactory: QuestionFactoryProtocol?
+    private weak var viewController: MovieQuizViewController?
+        
+    init(viewController: MovieQuizViewController) {
+        self.viewController = viewController
+        
+        questionFactory = QuestionFactory(moviesLoader: MoviesLoader(), delegate: self)
+        questionFactory?.loadData()
+        viewController.showLoadingIndicator(isEnabled: true)
+    }
+    
+    // MARK: - QuestionFactoryDelegate
+    
+    func didLoadDataFromServer() {
+        // скрываем индикатор загрузки
+        viewController?.showLoadingIndicator(isEnabled: false)
+        questionFactory?.requestNextQuestion()
+    }
+
+    func didFailToLoadData(with error: Error) {
+        // возьмём в качестве сообщения описание ошибки
+        viewController?.showNetworkError(message: error.localizedDescription)
+    }
+    
+    func didReceiveNextQuestion(question: QuizQuestion?) {
+        // получаем вопрос от фабрики вопросов и отображаем его
+        guard let question = question else {
+            return
+        }
+        currentQuestion = question
+        let viewModel = convert(model: question)
+        
+        // тут weak self избыточен (исключение)
+        DispatchQueue.main.async {
+            self.viewController?.showQuestion(quiz: viewModel)
+        }
+    }
+    
+    //
     
     func isLastQuestion() -> Bool {
         currentQuestionIndex == questionsAmount
@@ -25,6 +61,7 @@ final class MovieQuizPresenter {
     func restartGame() {
         currentQuestionIndex = 1
         correctAnswers = 0
+        questionFactory?.requestNextQuestion()
     }
     
     func switchToNextQuestion() {
@@ -46,26 +83,12 @@ final class MovieQuizPresenter {
         return questionStep
     }
     
-    func didReceiveNextQuestion(question: QuizQuestion?) {
-        // получаем вопрос от фабрики вопросов и отображаем его
-        guard let question = question else {
-            return
-        }
-        currentQuestion = question
-        let viewModel = convert(model: question)
-        
-        // тут weak self избыточен (исключение)
-        DispatchQueue.main.async {
-            self.viewController?.showQuestion(quiz: viewModel)
-        }
-    }
-    
     /// метод, который содержит логику перехода в один из сценариев
     func showNextQuestionOrResults() {
         if self.isLastQuestion() {
             // идём в состояние "Результат квиза"
             let text = "Вы ответили на \(correctAnswers) из 10, попробуйте еще раз!"
-            
+        
             let viewModel = QuizResultsViewModel(
                 title: "Этот раунд окончен!",
                 text: text,
