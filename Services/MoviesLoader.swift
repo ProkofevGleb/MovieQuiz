@@ -6,8 +6,11 @@ protocol MoviesLoading {
 
 /// Отвечает за загрузку фильмов
 struct MoviesLoader: MoviesLoading {
-    
-    private let networkClient = NetworkClient()
+    private let networkClient: NetworkRouting
+      
+    init(networkClient: NetworkRouting = NetworkClient()) {
+        self.networkClient = networkClient
+    }
     
     private var mostPopularMoviesUrl: URL {
         // Если мы не смогли преобразовать строку в URL, то приложение упадёт с ошибкой

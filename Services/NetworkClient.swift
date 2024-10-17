@@ -1,14 +1,19 @@
 import Foundation
+import UIKit
+
+protocol NetworkRouting {
+    func fetch(url: URL, handler: @escaping (Result<Data, Error>) -> Void)
+}
 
 /// Отвечает за загрузку данных по URL
-struct NetworkClient {
+struct NetworkClient: NetworkRouting {
     
     //  сетевая ошибка
     private enum NetworkError: Error {
         case codeError
     }
     
-    // функция запроса, которая будет загружать что-то по заранее заданному URL
+    // функция запроса, которая будет загружать по заранее заданному URL
     func fetch(url: URL, handler: @escaping (Result<Data, Error>) -> Void) {
         
         // создаем запрос из url
