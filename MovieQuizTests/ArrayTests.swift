@@ -1,27 +1,25 @@
-import XCTest // фреймворк для тестирования
-@testable import MovieQuiz // импортируем наше приложение для тестирования
+// фреймворк для тестирования
+import XCTest
+// импортируем приложение для тестирования
+@testable import MovieQuiz
 
 class ArrayTests: XCTestCase {
-    func testGetValueInRange() throws { // тест на успешное взятие элемента по индексу
-        // Given
+    // тест на успешное взятие элемента по индексу
+    func testGetValueInRange() throws {
         let array = [1, 1, 2, 3, 5]
         
-        // When
         let value = array[safe: 2]
         
-        // Then
         XCTAssertNotNil(value)
         XCTAssertEqual(value, 2)
     }
     
-    func testGetValueOutOfRange() throws { // тест на взятие элемента по неправильному индексу
-        // Given
+    // тест на взятие элемента по неправильному индексу
+    func testGetValueOutOfRange() throws {
         let array = [1, 1, 2, 3, 5]
             
-        // When
         let value = array[safe: 20]
         
-        // Then
         XCTAssertNil(value)
     }
 }

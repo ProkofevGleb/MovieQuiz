@@ -20,6 +20,8 @@ final class MovieQuizViewController:
     private var presenter: MovieQuizPresenter!
     // обращение к AlertPresenter
     private var alertPresenter: AlertPresenter?
+    // обращение к созданию статистики по игре
+    private var statisticService: StatisticServiceProtocol?
     
     // MARK: - Lifecycle
     
@@ -28,11 +30,16 @@ final class MovieQuizViewController:
 
         setupActivityIndicator()
         
-        presenter = MovieQuizPresenter(viewController: self)
+        statisticService = StatisticService()
+        guard let statisticService else {
+            print("Ошибка: statisticService не удалось инициализировать.")
+            return
+        }
         
-        let alertPresenter = AlertPresenter()
-        alertPresenter.delegate = self
-        self.alertPresenter = alertPresenter
+        presenter = MovieQuizPresenter(viewController: self, statisticService: statisticService)
+        
+        alertPresenter = AlertPresenter()
+        alertPresenter?.delegate = self
     }
     
     // MARK: - Network

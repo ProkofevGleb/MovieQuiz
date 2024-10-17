@@ -1,5 +1,7 @@
-import XCTest // фреймворк для тестирования
-@testable import MovieQuiz // импортируем наше приложение для тестирования
+// фреймворк для тестирования
+import XCTest
+// импортируем приложение для тестирования
+@testable import MovieQuiz
 
 final class MovieQuizViewControllerMock: MovieQuizViewControllerProtocol {
 
@@ -29,10 +31,25 @@ final class MovieQuizViewControllerMock: MovieQuizViewControllerProtocol {
     
 }
 
+final class StatisticServiceMock: StatisticServiceProtocol {
+    var gamesCount: Int = 1
+    
+    var bestGame = GameResult(correct: 6, total: 20, date: "01/01/2024")
+    
+    var totalAccuracy: Double = 0.0
+    
+    func store(_ gameResult: MovieQuiz.GameResult) {
+        
+    }
+}
+    
+
+
 final class MovieQuizPresenterTests: XCTestCase {
     func testPresenterConvertModel() throws {
         let viewControllerMock = MovieQuizViewControllerMock()
-        let sut = MovieQuizPresenter(viewController: viewControllerMock)
+        let statisticService = StatisticServiceMock()
+        let sut = MovieQuizPresenter(viewController: viewControllerMock, statisticService: statisticService)
         
         let emptyData = Data()
         let question = QuizQuestion(image: emptyData, text: "Question Text", correctAnswer: true)

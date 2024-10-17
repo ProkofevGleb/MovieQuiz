@@ -5,7 +5,7 @@ final class MovieQuizPresenter: QuestionFactoryDelegate {
     // MARK: - Properties
     
     private var questionFactory: QuestionFactoryProtocol?
-    private let statisticService: StatisticServiceProtocol!
+    private let statisticService: StatisticServiceProtocol
     private weak var viewController: MovieQuizViewControllerProtocol?
     
     // общее количество вопросов для квиза
@@ -17,10 +17,10 @@ final class MovieQuizPresenter: QuestionFactoryDelegate {
     // счётчик правильных ответов
     private var correctAnswers = 0
         
-    init(viewController: MovieQuizViewControllerProtocol) {
+    init(viewController: MovieQuizViewControllerProtocol,
+        statisticService: StatisticServiceProtocol) {
         self.viewController = viewController
-        
-        statisticService = StatisticService()
+        self.statisticService = statisticService
         
         questionFactory = QuestionFactory(moviesLoader: MoviesLoader(), delegate: self)
         questionFactory?.loadData()
@@ -149,7 +149,6 @@ final class MovieQuizPresenter: QuestionFactoryDelegate {
         let currentDate = Date().dateTimeString
         let gameResult = GameResult(correct: correctAnswers, total: questionsAmount, date: currentDate)
         
-        guard let statisticService else { fatalError() }
         statisticService.store(gameResult)
         
         // собираем модель для отображения результатов
